@@ -28,5 +28,5 @@ jobs:
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Action"
           git add last_title.txt
-          git commit -m "Update last title" || exit 0
-          git push
+          # 只有当文件有变动时才提交，防止报错
+          git diff --quiet && git diff --staged --quiet || (git commit -m "update title" && git push)
