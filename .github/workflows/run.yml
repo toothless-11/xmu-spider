@@ -1,4 +1,4 @@
-name: Monitor-Timer
+name: Monitor
 
 on:
   workflow_dispatch:
@@ -6,27 +6,29 @@ on:
     - cron: '*/30 * * * *'
 
 jobs:
-  build:
+  run-monitor:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python
+
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Install dependencies
+
+      - name: Install Libs
         run: pip install requests beautifulsoup4
-      - name: Run logic
+
+      - name: Run
         env:
           MAIL_USER: ${{ secrets.MAIL_USER }}
           MAIL_PASS: ${{ secrets.MAIL_PASS }}
         run: python monitor.py
-      - name: Save Result
-        run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Action"
-          git add last_title.txt
-          # 只有当文件有变动时才提交，防止报错
-          git diff --quiet && git diff --staged --quiet || (git commit -m "update title" && git push)
+
+      - name: Auto Save State
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Save state"
+          file_pattern: "last_title.txt"
