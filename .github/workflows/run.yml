@@ -25,6 +25,7 @@ jobs:
         env:
           MAIL_USER: ${{ secrets.MAIL_USER }}
           MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          PYTHONUNBUFFERED: 1  # 强制 Python 立即输出每一行日志，不缓存
         run: python monitor.py
 
       - name: Auto Save State
