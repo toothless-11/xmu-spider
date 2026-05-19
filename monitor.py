@@ -25,29 +25,50 @@ def send_email(title, link):
         print(f"Error: {e}")
 
 def main():
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
     try:
         res = requests.get(URL, headers=headers, timeout=15)
         res.encoding = 'utf-8'
         soup = BeautifulSoup(res.text, 'html.parser')
-        item = soup.find('a', title=True)
-        if not item: return
         
-        title, link = item['title'].strip(), item['href']
-        if not link.startswith('http'): link = "https://cxw.xmu.edu.cn" + link
+        # 1. 定位到列表容器
+        # 找到第一个 class 为 news 的 li 标签
+        news_item = soup.find('li', class_='news')
+        if not news_item:
+            print("未发现比赛列表，请检查网页结构")
+            return
 
-        # 核心逻辑：读取旧记录，对比
+        # 2. 提取链接
+        a_tag = news_item.find('a')
+        link = a_tag['href']
+        if not link.startswith('http'):
+            link = "https://cxw.xmu.edu.cn" + link
+
+        # 3. 提取标题
+        # 标题在 class="topic" 的 span 标签里
+        topic_span = news_item.find('span', class_='topic')
+        # get_text() 会拿到包括子标签在内的所有文字，strip() 去掉空格
+        # 因为开头有 ">" 符号，我们用 replace 或切片去掉它
+        title = topic_span.get_text(strip=True).replace('>', '', 1)
+
+        print(f"当前抓取到：{title}")
+
+        # 4. 核心逻辑：读取旧记录，对比
         fname = "last_title.txt"
-        old_title = open(fname, 'r', encoding='utf-8').read().strip() if os.path.exists(fname) else ""
+        old_title = ""
+        if os.path.exists(fname):
+            with open(fname, 'r', encoding='utf-8') as f:
+                old_title = f.read().strip()
 
         if title != old_title:
-            print(f"New: {title}")
+            print(f"检测到更新: {title}")
             send_email(title, link)
-            with open(fname, 'w', encoding='utf-8') as f: f.write(title)
+            with open(fname, 'w', encoding='utf-8') as f:
+                f.write(title)
         else:
-            print("No update")
-    except Exception as e:
-        print(f"Runtime Error: {e}")
+            print("没有新比赛")
 
-if __name__ == "__main__":
-    main()
+    except Exception as e:
+        print(f"运行出错: {e}")
