@@ -6,7 +6,6 @@ from email.mime.text import MIMEText
 from email.header import Header
 import sys
 
-# 从 GitHub Secrets 获取配置
 MAIL_USER = os.environ.get('MAIL_USER')
 MAIL_PASS = os.environ.get('MAIL_PASS')
 URL = "https://cxw.xmu.edu.cn/cms/0qRRjDIv4uaDz4FcwMRk00-1"
@@ -23,7 +22,6 @@ def send_email(title, link):
     msg['To'] = MAIL_USER
 
     try:
-        # QQ邮箱必须使用 SSL，端口 465
         server = smtplib.SMTP_SSL("smtp.qq.com", 465)
         server.login(MAIL_USER, MAIL_PASS)
         server.sendmail(MAIL_USER, [MAIL_USER], msg.as_string())
@@ -41,7 +39,6 @@ def main():
         res.encoding = 'utf-8'
         soup = BeautifulSoup(res.text, 'html.parser')
         
-        # 定位逻辑（已验证成功）
         news_item = soup.find('li', class_='news')
         if not news_item:
             print("未找到比赛列表", flush=True)
@@ -57,23 +54,30 @@ def main():
 
         print(f">>> 抓取到最新标题: {title}", flush=True)
 
-        # 读取旧记录对比
-        fname = "last_title.txt"
-        old_title = ""
+        # ========== 修改点1：改用ID集合 ==========
+        fname = "notified_ids.txt"
+        notified_ids = set()
+
         if os.path.exists(fname):
             with open(fname, 'r', encoding='utf-8') as f:
-                old_title = f.read().strip()
+                for line in f:
+                    notified_ids.add(line.strip())
 
-        if title != old_title:
-            print(f">>> 检测到新内容！(旧: {old_title})", flush=True)
-            # 1. 发送邮件
+        # 提取比赛唯一ID（从链接中取最后一段）
+        current_id = link.split('/')[-1]
+        
+        if current_id not in notified_ids:
+            print(f">>> 发现新比赛！(ID: {current_id})", flush=True)
             send_email(title, link)
-            # 2. 更新本地文件
+            
+            # 更新记录
+            notified_ids.add(current_id)
             with open(fname, 'w', encoding='utf-8') as f:
-                f.write(title)
+                for id in notified_ids:
+                    f.write(id + '\n')
             print(">>> 状态已更新", flush=True)
         else:
-            print(">>> 内容无变化，不发送邮件。", flush=True)
+            print(f">>> 比赛 {current_id} 已通知过，跳过", flush=True)
 
     except Exception as e:
         print(f">>> 运行出错: {e}", flush=True)
